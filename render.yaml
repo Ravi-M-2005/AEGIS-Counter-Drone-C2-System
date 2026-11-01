@@ -1,10 +1,10 @@
+
 services:
   - type: web
     name: aegis-backend
-    runtime: java
+    runtime: docker
     rootDir: aegis/aegis
-    buildCommand: ./mvnw clean package -DskipTests
-    startCommand: java -Dspring.profiles.active=prod -jar target/aegis-backend-0.0.1-SNAPSHOT.jar
+    dockerfilePath: ./Dockerfile
     plan: free
     healthCheckPath: /api/health
     envVars:

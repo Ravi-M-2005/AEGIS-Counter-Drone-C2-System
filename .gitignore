@@ -1,0 +1,97 @@
+# ==============================================================================
+# AEGIS C2 System - Root Git Ignore
+# ==============================================================================
+
+# Node / Frontend Build Outputs
+node_modules/
+dist/
+dist-ssr/
+build/
+*.local
+
+# Java Spring Boot Maven Build Outputs
+target/
+*.class
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# Environment variables & local secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Keystores, Certificates, Private Keys
+*.keystore
+*.p12
+*.jks
+*.key
+*.pem
+*.crt
+*.cert
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+*.h2.db
+data/
+
+# Binaries, local tools, logs
+.bin/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# IDE & Editor artifacts
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+.project
+.classpath
+.settings/
+.factorypath
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temporary Test Profiles & Scratches
+chrome-*-profile/
+scratch/
+test-results/
+
+# Nested dependencies and generated files
+**/node_modules/
+**/dist/
+**/target/
+**/.env
+**/.env.*
+!**/.env.example
+
+# Local databases and sensitive certificates
+**/*.mv.db
+**/*.trace.db
+**/*.db
+**/*.sqlite
+**/*.sqlite3
+**/*.jks
+**/*.p12
+**/*.keystore
+**/*.key
+**/*.pem
+
+**/target/
+
+!**/maven-wrapper.jar

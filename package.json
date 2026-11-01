@@ -1,0 +1,22 @@
+{
+  "name": "aegis-c2-system",
+  "version": "1.0.0",
+  "description": "AEGIS – AI-Based Counter-Drone Detection and Threat Management Command & Control System",
+  "private": true,
+  "scripts": {
+    "dev": "npm run dev --prefix frontend",
+    "build": "npm run build --prefix frontend",
+    "preview": "npm run preview --prefix frontend"
+  },
+  "keywords": [
+    "counter-drone",
+    "c2-system",
+    "air-defense",
+    "surveillance",
+    "spring-boot",
+    "react",
+    "vite"
+  ],
+  "author": "AEGIS Tactical Defense Systems",
+  "license": "UNLICENSED"
+}

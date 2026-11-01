@@ -99,7 +99,7 @@ export const LoginPage = ({ onLoginSuccess }) => {
             {backendStatus.isOnline ? (
               <span className="text-emerald-400 font-bold flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                SPRING BOOT ACTIVE (:8443)
+                SPRING BOOT ACTIVE
               </span>
             ) : (
               <span className="text-amber-400 font-bold flex items-center gap-1">

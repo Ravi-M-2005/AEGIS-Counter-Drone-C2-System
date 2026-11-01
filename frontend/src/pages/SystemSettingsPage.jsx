@@ -182,7 +182,7 @@ export const SystemSettingsPage = () => {
               Java Spring Boot Backend Integration Status
             </h3>
             <p className="text-slate-400 text-[11px] font-sans">
-              Endpoint synchronization with AegisApplication REST APIs (port :8443 SSL).
+              Endpoint synchronization with AegisApplication REST APIs.
             </p>
           </div>
           <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${
@@ -190,7 +190,7 @@ export const SystemSettingsPage = () => {
               ? 'bg-emerald-950 text-emerald-300 border-emerald-500/60'
               : 'bg-slate-900 text-slate-400 border-slate-700'
           }`}>
-            {backendStatus.isOnline ? 'ONLINE (:8443)' : 'LOCAL SIMULATOR'}
+            {backendStatus.isOnline ? 'ONLINE' : 'LOCAL SIMULATOR'}
           </span>
         </div>
 

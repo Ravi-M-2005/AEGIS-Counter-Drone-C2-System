@@ -33,5 +33,5 @@ if (-not (Test-Path $jarPath)) {
 }
 
 Set-Location $backendDir
-Write-Host "Starting AEGIS Spring Boot Application..." -ForegroundColor Green
-& $java -jar $jarPath
+Write-Host "Starting AEGIS Spring Boot Application (dev profile)..." -ForegroundColor Green
+& $java -Dspring.profiles.active=dev -jar $jarPath

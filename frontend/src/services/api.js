@@ -1,7 +1,11 @@
 // AEGIS Backend Integration Service
 // Communicates with Spring Boot backend when online, with seamless mock fallback
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
+// Robust API base normalization: handles base domain, with/without /api, trailing slashes
+const rawApiBase = (import.meta.env.VITE_API_BASE_URL || '/api').trim().replace(/\/+$/, '');
+export const API_BASE = (rawApiBase === '' || rawApiBase === '/api')
+  ? '/api'
+  : (rawApiBase.endsWith('/api') ? rawApiBase : `${rawApiBase}/api`);
 
 /**
  * Validates token structure and expiration (JWT exp claim)

@@ -87,7 +87,7 @@ export const Header = () => {
               {backendStatus.isOnline ? (
                 <span className="px-2 py-0.5 text-[10px] font-mono tracking-widest bg-emerald-950/80 text-emerald-300 border border-emerald-500/60 rounded font-bold shadow-[0_0_10px_rgba(16,185,129,0.3)] flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  LIVE BACKEND CONNECTED (:8443)
+                  LIVE BACKEND CONNECTED
                 </span>
               ) : (
                 <span className="px-2 py-0.5 text-[10px] font-mono tracking-widest bg-amber-950/70 text-amber-300 border border-amber-500/50 rounded font-bold flex items-center gap-1.5">
@@ -150,7 +150,7 @@ export const Header = () => {
           >
             <Server className={`w-3 h-3 ${backendStatus.isOnline ? 'text-emerald-400' : 'text-slate-400'}`} />
             <span className={`w-1.5 h-1.5 rounded-full ${backendStatus.isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`} />
-            <span>{backendStatus.isOnline ? 'Spring Boot :8443' : 'Local Simulator'}</span>
+            <span>{backendStatus.isOnline ? 'Spring Boot Active' : 'Local Simulator'}</span>
           </div>
         </div>
 

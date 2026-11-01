@@ -65,7 +65,7 @@ export const AegisProvider = ({ children }) => {
       setBackendStatus({
         isOnline: res.isOnline,
         checked: true,
-        detail: res.isOnline ? 'Spring Boot Active (:8443)' : 'Standalone Simulation Mode'
+        detail: res.isOnline ? 'Spring Boot Active' : 'Standalone Simulation Mode'
       });
     };
     checkBackend();

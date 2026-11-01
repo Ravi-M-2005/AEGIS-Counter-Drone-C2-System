@@ -1,0 +1,15 @@
+# Exclude sensitive and build files from Docker builds
+.git/
+.vscode/
+.bin/
+target/
+*.mv.db
+*.trace.db
+data/
+*.p12
+*.jks
+*.key
+*.pem
+.env*
+node_modules/
+dist/

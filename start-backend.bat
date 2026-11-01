@@ -19,5 +19,5 @@ if not exist "%JAR_PATH%" (
 
 cd /d "%~dp0aegis\aegis"
 echo Starting Spring Boot on https://localhost:8443 ...
-"%JAVA_EXE%" -jar "%JAR_PATH%"
+"%JAVA_EXE%" -Dspring.profiles.active=dev -jar "%JAR_PATH%"
 pause

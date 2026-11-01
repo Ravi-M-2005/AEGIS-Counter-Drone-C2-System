@@ -1,0 +1,26 @@
+server:
+  port: ${PORT:8443}
+  ssl:
+    enabled: true
+    key-store: classpath:aegis-local.p12
+    key-store-password: ${AEGIS_KEYSTORE_PASSWORD:changeit}
+    key-store-type: PKCS12
+    key-alias: aegis-local
+
+spring:
+  datasource:
+    url: jdbc:h2:file:./data/aegisdb;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password: ${DB_PASSWORD:}
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  jpa:
+    properties:
+      hibernate:
+        format_sql: true
+
+logging:
+  level:
+    org.springframework.security: DEBUG

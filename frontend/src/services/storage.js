@@ -15,6 +15,15 @@ export const loadStoredState = () => {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
+    if (parsed && Array.isArray(parsed.drones)) {
+      parsed.drones = parsed.drones.map(d => ({
+        ...d,
+        simulated: d.simulated != null ? d.simulated : true,
+        sensorSource: (d.sensorSource && (d.sensorSource.startsWith('SYNTHETIC') || d.sensorSource.startsWith('SIMULATION')))
+          ? d.sensorSource
+          : `SYNTHETIC ${d.sensorSource || 'Radar Stream'}`
+      }));
+    }
     return parsed;
   } catch (e) {
     console.error('Failed to load AEGIS stored state:', e);

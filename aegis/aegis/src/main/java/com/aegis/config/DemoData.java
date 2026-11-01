@@ -74,8 +74,23 @@ public class DemoData {
                                 i % 2 == 0
                                         ? "2.4 GHz ISM"
                                         : "5.8 GHz FHSS",
-                                i % 3 == 0
+                                i % 3 == 0,
+                                true,
+                                "SYNTHETIC",
+                                null,
+                                null
                         ));
+                    }
+                }
+            }
+
+            // Ensure any existing demo records from previous runs are categorized as SYNTHETIC
+            for (Drone d : drones.findAll()) {
+                if (!d.isSimulated() || !"SYNTHETIC".equals(d.getDetectionSource())) {
+                    if (!d.getDetectionSource().startsWith("HARDWARE_")) {
+                        d.setSimulated(true);
+                        d.setDetectionSource("SYNTHETIC");
+                        drones.save(d);
                     }
                 }
             }

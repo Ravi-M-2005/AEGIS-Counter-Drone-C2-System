@@ -36,6 +36,8 @@ export const AegisProvider = ({ children }) => {
   const [activeSector, setActiveSector] = useState('bengaluru'); // 'bengaluru', 'border', 'defence'
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [backendStatus, setBackendStatus] = useState({ isOnline: false, checked: false, detail: 'Checking...' });
+  const [backendStats, setBackendStats] = useState(null);
+  const [isDetectionsLoading, setIsDetectionsLoading] = useState(false);
   const [selectedDroneId, setSelectedDroneId] = useState(null);
 
   tacticalAudio.enabled = audioEnabled;
@@ -85,8 +87,8 @@ export const AegisProvider = ({ children }) => {
     const center = SECTOR_COORDS[sec] || SECTOR_COORDS.bengaluru;
     const rad = ((bd.angle || 0) * Math.PI) / 180;
     const dist = bd.distanceKm != null ? bd.distanceKm : 1.2;
-    const lat = parseFloat((center.lat + (dist / 111.0) * Math.cos(rad)).toFixed(6));
-    const lng = parseFloat((center.lng + (dist / (111.0 * Math.cos((center.lat * Math.PI) / 180))) * Math.sin(rad)).toFixed(6));
+    const lat = bd.latitude != null ? bd.latitude : parseFloat((center.lat + (dist / 111.0) * Math.cos(rad)).toFixed(6));
+    const lng = bd.longitude != null ? bd.longitude : parseFloat((center.lng + (dist / (111.0 * Math.cos((center.lat * Math.PI) / 180))) * Math.sin(rad)).toFixed(6));
 
     const threat = evaluateDroneThreat({
       distanceKm: dist,
@@ -95,6 +97,13 @@ export const AegisProvider = ({ children }) => {
       payloadDetected: !!bd.payloadDetected,
       rfBand: bd.rfBand || '2.4 GHz'
     });
+
+    const isSim = bd.simulated != null ? !!bd.simulated : true;
+    const detectedAtStr = bd.detectedAt || bd.updatedAt || new Date().toISOString();
+    const rawSource = bd.detectionSource || (isSim ? 'SYNTHETIC' : 'EXTERNAL_HARDWARE_RADAR');
+    const source = (rawSource.startsWith('SYNTHETIC') || rawSource.startsWith('SIMULATION'))
+      ? rawSource
+      : (isSim ? `SYNTHETIC (${rawSource})` : rawSource);
 
     return {
       id: bd.id,
@@ -107,50 +116,79 @@ export const AegisProvider = ({ children }) => {
       speed: Math.round(bd.speed || 35),
       distanceKm: parseFloat(dist.toFixed(2)),
       confidence: bd.confidence || 85,
-      rfBand: bd.rfBand || '2.4 GHz',
+      rfBand: bd.rfBand || '2.4 GHz ISM',
       payloadDetected: !!bd.payloadDetected,
       payloadType: bd.payloadDetected ? 'Auxiliary Optical / Drop Pod' : 'None',
-      threatLevel: threat.threatLevel,
-      threatScore: threat.threatScore,
+      threatLevel: bd.threatLevel || threat.threatLevel,
+      threatScore: bd.threatScore || threat.threatScore,
       threatFactors: threat.factors,
       recommendedAction: threat.recommendedAction,
       status: bd.status || 'TRACKING',
-      sensorSource: 'AESA 3D Radar Alpha (Live Backend)',
+      simulated: isSim,
+      sensorSource: source,
       movementPattern: (bd.speed || 0) > 60 ? 'High-Velocity Approach Vector' : 'Inbound Hover / Reconnaissance',
-      lastSeen: bd.updatedAt || new Date().toISOString(),
-      history: [{ lat, lng, time: 'Live', alt: Math.round(bd.altitudeMeters || 100), spd: Math.round(bd.speed || 35) }]
+      detectedAt: detectedAtStr,
+      lastSeen: bd.updatedAt || detectedAtStr,
+      history: [{ lat, lng, time: detectedAtStr.substring(11, 19), alt: Math.round(bd.altitudeMeters || 100), spd: Math.round(bd.speed || 35) }]
     };
   };
 
-  // Sync drones with backend if backend is available
+  // Sync drones and stats with backend
+  const syncDrones = async () => {
+    if (!currentUser?.token) return;
+    try {
+      // 1. Fetch all drone detections across all sectors
+      const res = await aegisApi.getDrones('all', null, currentUser.token);
+      if (res.unauthorized) {
+        logoutUser();
+        return;
+      }
+      if (res.success && Array.isArray(res.data)) {
+        const backendMapped = res.data.map(bd => convertBackendDrone(bd));
+        setState(prev => {
+          const currentMap = new Map(prev.drones.map(d => [d.id, d]));
+          const merged = backendMapped.map(bd => {
+            const existing = currentMap.get(bd.id);
+            if (existing) {
+              return {
+                ...bd,
+                // Preserve local motion history and telemetry jitter if actively tracking
+                lat: existing.lat != null ? existing.lat : bd.lat,
+                lng: existing.lng != null ? existing.lng : bd.lng,
+                altitude: existing.altitude != null ? existing.altitude : bd.altitude,
+                speed: existing.speed != null ? existing.speed : bd.speed,
+                heading: existing.heading != null ? existing.heading : bd.heading,
+                history: existing.history && existing.history.length > 0 ? existing.history : bd.history,
+                status: existing.status || bd.status
+              };
+            }
+            return bd;
+          });
+          return {
+            ...prev,
+            drones: merged
+          };
+        });
+      }
+
+      // 2. Fetch live detection statistics from Spring Boot / PostgreSQL
+      const statsRes = await aegisApi.getDroneStats(currentUser.token);
+      if (statsRes.success && statsRes.data) {
+        setBackendStats(statsRes.data);
+      }
+    } catch (err) {
+      console.warn('Backend drone sync warning:', err);
+    }
+  };
+
+  // Periodic synchronization with backend
   useEffect(() => {
     if (!backendStatus.isOnline || !currentUser?.token) return;
-
-    const syncDrones = () => {
-      aegisApi.getDrones(activeSector, 50.0, currentUser.token).then(res => {
-        if (res.unauthorized) {
-          logoutUser();
-          return;
-        }
-        if (res.success && Array.isArray(res.data) && res.data.length > 0) {
-          const backendMapped = res.data.map(bd => convertBackendDrone(bd, activeSector));
-          setState(prev => {
-            const backendIds = new Set(backendMapped.map(d => d.id));
-            const otherDrones = prev.drones.filter(d => d.sector !== activeSector && !backendIds.has(d.id));
-            const newSimIncursions = prev.drones.filter(d => d.sector === activeSector && d.id.startsWith('DRN-') && !backendIds.has(d.id));
-            return {
-              ...prev,
-              drones: [...backendMapped, ...newSimIncursions, ...otherDrones]
-            };
-          });
-        }
-      });
-    };
 
     syncDrones();
     const interval = setInterval(syncDrones, 8000);
     return () => clearInterval(interval);
-  }, [backendStatus.isOnline, activeSector, currentUser]);
+  }, [backendStatus.isOnline, currentUser]);
 
   // Main Simulation Loop
   useEffect(() => {
@@ -256,12 +294,12 @@ export const AegisProvider = ({ children }) => {
     setSimulationSpeed(speed);
   };
 
-  // Generate a new simulated drone detection
-  const generateDroneDetection = (forcedThreat = null) => {
+  // Generate a new simulated drone detection (persisted to Spring Boot / PostgreSQL when online)
+  const generateDroneDetection = async (forcedThreat = null, customParams = {}) => {
     tacticalAudio.playRadarPing();
-    const nowStr = new Date().toISOString().replace('T', ' ').substring(0, 19);
-    const count = state.drones.length + 1;
-    const droneId = `DRN-${activeSector.toUpperCase().substring(0, 3)}-${String(count).padStart(2, '0')}`;
+    const nowStr = new Date().toISOString();
+    const count = (backendStats?.totalDrones || state.drones.length) + 1;
+    let droneId = customParams.id || `DRN-SIM-${String(count).padStart(3, '0')}`;
 
     // Base coordinate around active sector
     let baseLat = 13.1986;
@@ -274,23 +312,31 @@ export const AegisProvider = ({ children }) => {
       baseLng = 72.8347;
     }
 
-    const angle = Math.random() * 2 * Math.PI;
-    const distanceKm = forcedThreat === 'CRITICAL' ? (0.4 + Math.random() * 0.8) : (1.5 + Math.random() * 4.5);
+    const angle = customParams.angle != null ? (customParams.angle * Math.PI) / 180 : Math.random() * 2 * Math.PI;
+    const distanceKm = customParams.distanceKm != null
+      ? customParams.distanceKm
+      : (forcedThreat === 'CRITICAL' ? (0.4 + Math.random() * 0.8) : (1.5 + Math.random() * 4.5));
     const dLat = (distanceKm / 111) * Math.cos(angle);
     const dLng = (distanceKm / (111 * Math.cos((baseLat * Math.PI) / 180))) * Math.sin(angle);
 
-    const lat = parseFloat((baseLat + dLat).toFixed(6));
-    const lng = parseFloat((baseLng + dLng).toFixed(6));
-    const altitude = forcedThreat === 'CRITICAL' ? Math.floor(35 + Math.random() * 30) : Math.floor(60 + Math.random() * 180);
-    const speed = forcedThreat === 'CRITICAL' ? Math.floor(80 + Math.random() * 50) : Math.floor(30 + Math.random() * 45);
-    const hasPayload = forcedThreat === 'CRITICAL' ? true : Math.random() > 0.6;
+    const lat = customParams.latitude != null ? customParams.latitude : parseFloat((baseLat + dLat).toFixed(6));
+    const lng = customParams.longitude != null ? customParams.longitude : parseFloat((baseLng + dLng).toFixed(6));
+    const altitude = customParams.altitude != null
+      ? customParams.altitude
+      : (forcedThreat === 'CRITICAL' ? Math.floor(35 + Math.random() * 30) : Math.floor(60 + Math.random() * 180));
+    const speed = customParams.speed != null
+      ? customParams.speed
+      : (forcedThreat === 'CRITICAL' ? Math.floor(80 + Math.random() * 50) : Math.floor(30 + Math.random() * 45));
+    const hasPayload = customParams.payloadDetected != null
+      ? customParams.payloadDetected
+      : (forcedThreat === 'CRITICAL' ? true : Math.random() > 0.6);
     const rfBands = ['2.4 GHz OccuSync', '5.8 GHz FHSS', '433 MHz LoRa', '915 MHz Telemetry', 'Encrypted Military Link'];
     const models = ['DJI Matrice 350', 'Autel EVO Max 4T', 'Sky-Knight Micro-UAV', 'Fixed-Wing Scout VTOL', 'Heavy Cargo Quad'];
     const sensors = state.sensors.filter(s => s.sector === activeSector && s.status === 'ONLINE');
-    const sensorSource = sensors.length > 0 ? sensors[Math.floor(Math.random() * sensors.length)].name : 'AESA 3D Radar Alpha';
+    const sensorSource = customParams.sensorSource || 'SYNTHETIC Incursion Generator';
 
-    const rfBand = rfBands[Math.floor(Math.random() * rfBands.length)];
-    const model = models[Math.floor(Math.random() * models.length)];
+    const rfBand = customParams.rfBand || rfBands[Math.floor(Math.random() * rfBands.length)];
+    const model = customParams.model || models[Math.floor(Math.random() * models.length)];
 
     const evalResult = evaluateDroneThreat({
       distanceKm,
@@ -304,13 +350,53 @@ export const AegisProvider = ({ children }) => {
     const threatLevel = forcedThreat || evalResult.threatLevel;
     const threatScore = forcedThreat === 'CRITICAL' ? Math.max(90, evalResult.threatScore) : evalResult.threatScore;
 
+    // Backend payload for database persistence
+    const backendPayload = {
+      id: customParams.id || null,
+      locationId: activeSector,
+      type: model,
+      angle: Math.round(((angle * 180) / Math.PI + 360) % 360),
+      distanceKm: parseFloat(distanceKm.toFixed(2)),
+      speed: parseFloat(speed),
+      altitudeMeters: parseFloat(altitude),
+      confidence: Math.floor(88 + Math.random() * 11),
+      rfBand,
+      payloadDetected: hasPayload,
+      simulated: true,
+      detectionSource: sensorSource,
+      latitude: lat,
+      longitude: lng,
+      threatLevel,
+      threatScore,
+      status: 'TRACKING'
+    };
+
+    let backendDrone = null;
+    if (backendStatus.isOnline && currentUser?.token) {
+      try {
+        const createRes = await aegisApi.createDroneDetection(backendPayload, currentUser.token);
+        if (createRes.success && createRes.data) {
+          backendDrone = createRes.data;
+          droneId = backendDrone.id || droneId;
+          // Refresh backend statistics immediately
+          aegisApi.getDroneStats(currentUser.token).then(statsRes => {
+            if (statsRes.success && statsRes.data) {
+              setBackendStats(statsRes.data);
+            }
+          });
+        }
+      } catch (err) {
+        console.warn('Persist detection to backend warning:', err);
+      }
+    }
+
     const newDrone = {
       id: droneId,
       model,
       sector: activeSector,
       lat,
       lng,
-      heading: Math.floor(Math.random() * 360),
+      heading: backendPayload.angle,
       altitude,
       speed,
       distanceKm: parseFloat(distanceKm.toFixed(2)),
@@ -319,8 +405,9 @@ export const AegisProvider = ({ children }) => {
       payloadType: hasPayload ? 'Suspended Cargo / Optical Pod' : 'None',
       threatLevel,
       threatScore,
-      confidence: Math.floor(88 + Math.random() * 11),
+      confidence: backendPayload.confidence,
       sensorSource,
+      simulated: true,
       status: 'TRACKING',
       zoneId: state.zones.find(z => z.sector === activeSector)?.id || null,
       detectedAt: nowStr,
@@ -367,17 +454,47 @@ export const AegisProvider = ({ children }) => {
 
     setState(prev => ({
       ...prev,
-      drones: [newDrone, ...prev.drones],
+      drones: [newDrone, ...prev.drones.filter(d => d.id !== droneId)],
       alerts: [newAlert, ...prev.alerts],
       incidents: newIncident ? [newIncident, ...prev.incidents] : prev.incidents
     }));
 
     setSelectedDroneId(droneId);
+    return newDrone;
   };
 
   // Generate Critical Threat
-  const generateCriticalThreat = () => {
-    generateDroneDetection('CRITICAL');
+  const generateCriticalThreat = (customParams = {}) => {
+    return generateDroneDetection('CRITICAL', customParams);
+  };
+
+  // Manual refresh detections from backend
+  const refreshDetections = async () => {
+    setIsDetectionsLoading(true);
+    await syncDrones();
+    setIsDetectionsLoading(false);
+  };
+
+  // Delete drone detection record
+  const deleteDroneDetection = async (droneId) => {
+    if (backendStatus.isOnline && currentUser?.token) {
+      try {
+        await aegisApi.deleteDrone(droneId, currentUser.token);
+      } catch (e) {
+        console.warn('Delete backend drone error:', e);
+      }
+    }
+    setState(prev => ({
+      ...prev,
+      drones: prev.drones.filter(d => d.id !== droneId)
+    }));
+    if (currentUser?.token) {
+      aegisApi.getDroneStats(currentUser.token).then(statsRes => {
+        if (statsRes.success && statsRes.data) {
+          setBackendStats(statsRes.data);
+        }
+      });
+    }
   };
 
   // Reset to initial demo data
@@ -581,6 +698,8 @@ export const AegisProvider = ({ children }) => {
         activeSector,
         audioEnabled,
         backendStatus,
+        backendStats,
+        isDetectionsLoading,
         selectedDroneId,
 
         // Setters
@@ -593,6 +712,8 @@ export const AegisProvider = ({ children }) => {
         toggleSimulation,
         generateDroneDetection,
         generateCriticalThreat,
+        refreshDetections,
+        deleteDroneDetection,
         resetDemoData,
         updateDroneStatus,
         addZone,

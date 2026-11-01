@@ -80,10 +80,25 @@ public class ProductionDataInitializer {
                                 45 + (i * 15),
                                 80 + (i % 18),
                                 i % 2 == 0 ? "2.4 GHz ISM" : "5.8 GHz FHSS",
-                                i % 3 == 0
+                                i % 3 == 0,
+                                true,
+                                "SYNTHETIC",
+                                null,
+                                null
                         ));
                     }
-                    log.info("Initialized baseline drone fleet for sector: {}", loc);
+                    log.info("Initialized baseline synthetic drone fleet for sector: {}", loc);
+                }
+            }
+
+            // Ensure baseline demo records in PostgreSQL are categorized as SYNTHETIC
+            for (Drone d : drones.findAll()) {
+                if (!d.isSimulated() || !"SYNTHETIC".equals(d.getDetectionSource())) {
+                    if (!d.getDetectionSource().startsWith("HARDWARE_")) {
+                        d.setSimulated(true);
+                        d.setDetectionSource("SYNTHETIC");
+                        drones.save(d);
+                    }
                 }
             }
         };

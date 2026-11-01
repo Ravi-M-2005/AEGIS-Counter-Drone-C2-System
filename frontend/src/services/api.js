@@ -110,14 +110,29 @@ export const aegisApi = {
     }
   },
 
-  // Fetch drones from backend if available
-  async getDrones(locationId = 'bengaluru', rangeKm = 10.0, token = null) {
+  // Fetch drones from backend with optional filters
+  async getDrones(locationId = 'bengaluru', rangeKm = null, token = null, simulated = null) {
     try {
       const headers = { Accept: 'application/json' };
       if (token) headers['Authorization'] = `Bearer ${token}`;
-      const res = await fetch(`${API_BASE}/drones?locationId=${encodeURIComponent(locationId)}&rangeKm=${rangeKm}`, {
+
+      const params = new URLSearchParams();
+      if (locationId && locationId !== 'all') {
+        params.append('locationId', locationId);
+      }
+      if (rangeKm && rangeKm > 0) {
+        params.append('rangeKm', String(rangeKm));
+      }
+      if (simulated !== null && simulated !== undefined) {
+        params.append('simulated', String(simulated));
+      }
+
+      const queryString = params.toString();
+      const url = `${API_BASE}/drones${queryString ? `?${queryString}` : ''}`;
+
+      const res = await fetch(url, {
         headers,
-        signal: AbortSignal.timeout(2500)
+        signal: AbortSignal.timeout(6000)
       });
       if (res.ok) {
         return { success: true, data: await res.json() };
@@ -125,10 +140,105 @@ export const aegisApi = {
       if (res.status === 401 || res.status === 403) {
         return { success: false, unauthorized: true };
       }
-    } catch {
-      // Handled by simulation fallback
+      return { success: false, status: res.status };
+    } catch (err) {
+      return { success: false, error: err.message };
     }
-    return { success: false };
+  },
+
+  // Fetch individual drone details by ID
+  async getDroneById(id, token = null) {
+    try {
+      const headers = { Accept: 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const res = await fetch(`${API_BASE}/drones/${encodeURIComponent(id)}`, {
+        headers,
+        signal: AbortSignal.timeout(6000)
+      });
+      if (res.ok) {
+        return { success: true, data: await res.json() };
+      }
+      if (res.status === 401 || res.status === 403) {
+        return { success: false, unauthorized: true };
+      }
+      return { success: false, status: res.status };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  },
+
+  // Fetch live detection statistics from backend
+  async getDroneStats(token = null) {
+    try {
+      const headers = { Accept: 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const res = await fetch(`${API_BASE}/drones/stats`, {
+        headers,
+        signal: AbortSignal.timeout(6000)
+      });
+      if (res.ok) {
+        return { success: true, data: await res.json() };
+      }
+      if (res.status === 401 || res.status === 403) {
+        return { success: false, unauthorized: true };
+      }
+      return { success: false, status: res.status };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  },
+
+  // Create and persist drone detection record in backend PostgreSQL
+  async createDroneDetection(droneData, token = null) {
+    try {
+      const headers = {
+        'Content-Type': 'application/json',
+        Accept: 'application/json'
+      };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const res = await fetch(`${API_BASE}/drones`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(droneData),
+        signal: AbortSignal.timeout(8000)
+      });
+      if (res.ok) {
+        return { success: true, data: await res.json() };
+      }
+      if (res.status === 401 || res.status === 403) {
+        return { success: false, unauthorized: true };
+      }
+      let errMsg = `HTTP ${res.status}`;
+      try {
+        const errJson = await res.json();
+        if (errJson.error) errMsg = errJson.error;
+      } catch {}
+      return { success: false, error: errMsg, status: res.status };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  },
+
+  // Delete drone detection record
+  async deleteDrone(id, token = null) {
+    try {
+      const headers = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const res = await fetch(`${API_BASE}/drones/${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+        headers,
+        signal: AbortSignal.timeout(6000)
+      });
+      if (res.ok || res.status === 204) {
+        return { success: true };
+      }
+      if (res.status === 401 || res.status === 403) {
+        return { success: false, unauthorized: true };
+      }
+      return { success: false, status: res.status };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
   },
 
   // Patch drone status on backend

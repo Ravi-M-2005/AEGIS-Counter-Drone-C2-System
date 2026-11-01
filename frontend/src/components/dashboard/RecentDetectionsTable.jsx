@@ -45,8 +45,13 @@ export const RecentDetectionsTable = ({ drones, onSelectDrone, onViewAll }) => {
               >
                 <td className="py-2.5 px-2">
                   <div className="font-bold text-cyan-300 flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
+                    <span className={`w-1.5 h-1.5 rounded-full ${drone.simulated ? 'bg-amber-400' : 'bg-cyan-400'}`} />
                     <span>{drone.id}</span>
+                    {drone.simulated ? (
+                      <span className="text-[9px] px-1 py-0.2 rounded bg-amber-950/80 text-amber-300 border border-amber-600/40">SYNTH</span>
+                    ) : (
+                      <span className="text-[9px] px-1 py-0.2 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-600/40">LIVE</span>
+                    )}
                   </div>
                   <div className="text-[10px] text-slate-400 truncate max-w-[140px]">{drone.model}</div>
                 </td>

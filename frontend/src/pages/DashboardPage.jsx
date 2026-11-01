@@ -37,14 +37,16 @@ export const DashboardPage = ({ onNavigate }) => {
     resetDemoData,
     acknowledgeAlert,
     setSelectedDroneId,
-    activeSector
+    activeSector,
+    backendStats,
+    backendStatus
   } = useAegis();
 
-  // Calculate statistics
-  const totalDrones = drones.length;
-  const activeDrones = drones.filter(d => d.status === 'TRACKING').length;
-  const highRiskThreats = drones.filter(d => d.threatLevel === 'HIGH' || d.threatLevel === 'CRITICAL').length;
-  const criticalAlerts = alerts.filter(a => a.severity === 'CRITICAL' && !a.acknowledged).length;
+  // Calculate statistics (prefer live database statistics when available)
+  const totalDrones = backendStats?.totalDrones ?? drones.length;
+  const activeDrones = backendStats?.activeDrones ?? drones.filter(d => d.status === 'TRACKING').length;
+  const highRiskThreats = backendStats?.highRiskThreats ?? drones.filter(d => d.threatLevel === 'HIGH' || d.threatLevel === 'CRITICAL').length;
+  const criticalAlerts = backendStats?.criticalAlerts ?? alerts.filter(a => a.severity === 'CRITICAL' && !a.acknowledged).length;
   const activeZones = zones.filter(z => z.status === 'ACTIVE' || z.status === 'HEIGHTENED_ALERT').length;
   const operationalSensors = sensors.filter(s => s.status === 'ONLINE').length;
   const openIncidents = incidents.filter(i => i.status === 'OPEN' || i.status === 'ASSIGNED').length;
@@ -63,9 +65,18 @@ export const DashboardPage = ({ onNavigate }) => {
             <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-950 text-cyan-300 border border-cyan-500/40">
               Sector: {activeSector.toUpperCase()}
             </span>
+            <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-amber-950 text-amber-300 border border-amber-500/40">
+              SYNTHETIC TELEMETRY: ACTIVE
+            </span>
+            <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-slate-900 text-slate-400 border border-slate-700">
+              HARDWARE RADAR/RF: DISCONNECTED
+            </span>
           </div>
           <p className="text-xs text-slate-400 mt-1">
             Real-time counter-UAS sensor fusion, AI trajectory tracking, and automated response coordination.
+            <span className="text-amber-400/80 ml-2">
+              (Synthetic telemetry emulation mode &bull; No physical radar/RF hardware connected &bull; PostgreSQL live persisted)
+            </span>
           </p>
         </div>
 
@@ -80,12 +91,13 @@ export const DashboardPage = ({ onNavigate }) => {
             }`}
           >
             {isSimulating ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-            <span>{isSimulating ? 'SIMULATION RUNNING' : 'PAUSED'}</span>
+            <span>{isSimulating ? 'SYNTHETIC SWEEP ACTIVE' : 'SWEEP PAUSED'}</span>
           </button>
 
           <button
             onClick={() => generateDroneDetection()}
             className="px-3 py-1.5 rounded-lg bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 border border-cyan-600/50 flex items-center gap-1.5 transition-all cursor-pointer"
+            title="Inject simulated detection and persist to PostgreSQL backend"
           >
             <Radar className="w-3.5 h-3.5 text-cyan-400" />
             <span>+ Simulated Detection</span>
@@ -94,6 +106,7 @@ export const DashboardPage = ({ onNavigate }) => {
           <button
             onClick={() => generateCriticalThreat()}
             className="px-3 py-1.5 rounded-lg bg-red-950/80 hover:bg-red-900 text-red-300 border border-red-600/60 flex items-center gap-1.5 transition-all shadow-[0_0_12px_rgba(239,68,68,0.2)] cursor-pointer"
+            title="Inject critical threat incursion and persist to backend"
           >
             <Zap className="w-3.5 h-3.5 text-red-400" />
             <span>+ Critical Threat</span>
@@ -102,7 +115,7 @@ export const DashboardPage = ({ onNavigate }) => {
           <button
             onClick={resetDemoData}
             className="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 flex items-center gap-1 transition-all"
-            title="Reset to default initial simulation data"
+            title="Reset local simulation caches"
           >
             <RotateCcw className="w-3.5 h-3.5 text-slate-400" />
             <span>Reset</span>
@@ -113,21 +126,21 @@ export const DashboardPage = ({ onNavigate }) => {
       {/* 8 Primary KPI Metric Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard
-          title="Total Drones Detected"
+          title="Total Drones Tracked"
           value={totalDrones}
-          subtext="Cumulative radar & RF logs"
+          subtext="Cumulative database telemetry"
           icon={Crosshair}
           variant="cyan"
           onClick={() => onNavigate('detections')}
         />
 
         <StatCard
-          title="Active Live Drones"
+          title="Active Tracked Drones"
           value={activeDrones}
-          subtext="Currently within sector radar"
+          subtext="Synthetic sweep incursion pings"
           icon={Radar}
           variant="emerald"
-          badge="Live Pings"
+          badge="Synthetic Sweep"
           onClick={() => onNavigate('surveillance')}
         />
 

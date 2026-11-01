@@ -3,6 +3,7 @@ package com.aegis.config;
 
 import com.aegis.drone.Drone;
 import com.aegis.drone.DroneRepository;
+import com.aegis.drone.ThreatLevel;
 import com.aegis.operator.Operator;
 import com.aegis.operator.OperatorRepository;
 import org.springframework.boot.CommandLineRunner;
@@ -84,15 +85,35 @@ public class DemoData {
                 }
             }
 
-            // Ensure any existing demo records from previous runs are categorized as SYNTHETIC
-            for (Drone d : drones.findAll()) {
-                if (!d.isSimulated() || !"SYNTHETIC".equals(d.getDetectionSource())) {
-                    if (!d.getDetectionSource().startsWith("HARDWARE_")) {
-                        d.setSimulated(true);
-                        d.setDetectionSource("SYNTHETIC");
+            // Ensure any existing demo records from previous runs are categorized as SYNTHETIC without null pointer risk
+            try {
+                for (Drone d : drones.findAll()) {
+                    boolean changed = false;
+                    String source = d.getDetectionSource();
+                    if (source == null || !source.startsWith("HARDWARE_")) {
+                        if (!d.isSimulated()) {
+                            d.setSimulated(true);
+                            changed = true;
+                        }
+                        if (source == null || !"SYNTHETIC".equals(source)) {
+                            d.setDetectionSource("SYNTHETIC");
+                            changed = true;
+                        }
+                    }
+                    if (d.getLatitude() == null || d.getLongitude() == null) {
+                        d.computeCoordinates();
+                        changed = true;
+                    }
+                    if (d.getThreatLevel() == null) {
+                        d.setThreatLevel(ThreatLevel.LOW);
+                        changed = true;
+                    }
+                    if (changed) {
                         drones.save(d);
                     }
                 }
+            } catch (Exception ex) {
+                // Non-fatal demo migration check
             }
         };
     }

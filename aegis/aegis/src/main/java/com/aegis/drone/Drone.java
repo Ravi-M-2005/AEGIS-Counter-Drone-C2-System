@@ -39,7 +39,8 @@ public class Drone {
     private Double latitude;
     private Double longitude;
 
-    private boolean simulated = true;
+    @Column(name="simulated")
+    private Boolean simulated = true;
 
     @Column(length=120)
     private String detectionSource = "SYNTHETIC";
@@ -48,7 +49,8 @@ public class Drone {
     @Column(length=32)
     private ThreatLevel threatLevel = ThreatLevel.LOW;
 
-    private int threatScore = 15;
+    @Column(name="threat_score")
+    private Integer threatScore = 15;
 
     private Instant detectedAt;
 
@@ -190,23 +192,33 @@ public class Drone {
         this.updatedAt = Instant.now();
     }
 
-    public Double getLatitude() { return latitude; }
+    public Double getLatitude() {
+        if (latitude == null) computeCoordinates();
+        return latitude;
+    }
     public void setLatitude(Double latitude) { this.latitude = latitude; }
 
-    public Double getLongitude() { return longitude; }
+    public Double getLongitude() {
+        if (longitude == null) computeCoordinates();
+        return longitude;
+    }
     public void setLongitude(Double longitude) { this.longitude = longitude; }
 
-    public boolean isSimulated() { return simulated; }
-    public void setSimulated(boolean simulated) { this.simulated = simulated; }
+    public boolean isSimulated() { return simulated != null ? simulated : true; }
+    public void setSimulated(Boolean simulated) { this.simulated = (simulated != null) ? simulated : true; }
 
-    public String getDetectionSource() { return detectionSource; }
-    public void setDetectionSource(String detectionSource) { this.detectionSource = detectionSource; }
+    public String getDetectionSource() {
+        return (detectionSource != null && !detectionSource.isBlank()) ? detectionSource : "SYNTHETIC";
+    }
+    public void setDetectionSource(String detectionSource) {
+        this.detectionSource = (detectionSource != null && !detectionSource.isBlank()) ? detectionSource : "SYNTHETIC";
+    }
 
     public ThreatLevel getThreatLevel() { return threatLevel != null ? threatLevel : ThreatLevel.LOW; }
-    public void setThreatLevel(ThreatLevel threatLevel) { this.threatLevel = threatLevel; }
+    public void setThreatLevel(ThreatLevel threatLevel) { this.threatLevel = threatLevel != null ? threatLevel : ThreatLevel.LOW; }
 
-    public int getThreatScore() { return threatScore; }
-    public void setThreatScore(int threatScore) { this.threatScore = threatScore; }
+    public int getThreatScore() { return threatScore != null ? threatScore : 15; }
+    public void setThreatScore(Integer threatScore) { this.threatScore = threatScore != null ? threatScore : 15; }
 
     public Instant getDetectedAt() { return detectedAt != null ? detectedAt : (updatedAt != null ? updatedAt : Instant.now()); }
     public void setDetectedAt(Instant detectedAt) { this.detectedAt = detectedAt; }

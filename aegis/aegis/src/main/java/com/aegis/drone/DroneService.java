@@ -159,8 +159,8 @@ public class DroneService {
         long criticalThreats = drones.countByThreatLevel(ThreatLevel.CRITICAL);
         long highRiskThreats = highThreats + criticalThreats;
         long criticalAlerts = criticalThreats;
-        long simulated = drones.countBySimulated(true);
         long live = drones.countBySimulated(false);
+        long simulated = Math.max(0, total - live);
         long neutralized = drones.countByStatus(DroneStatus.NEUTRALIZED);
         long cleared = drones.countByStatus(DroneStatus.CLEARED);
         long mitigated = neutralized + cleared;

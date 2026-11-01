@@ -1,3 +1,4 @@
+
 # ==============================================================================
 # AEGIS C2 System - Root Git Ignore
 # ==============================================================================
@@ -41,13 +42,14 @@ target/
 *.sqlite
 *.sqlite3
 *.h2.db
-data/
+
+# Ignore only the backend database directory
+/aegis/aegis/data/
 
 # Binaries, local tools, logs
 .bin/
 *.log
 npm-debug.log*
-yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
@@ -92,6 +94,5 @@ test-results/
 **/*.key
 **/*.pem
 
-**/target/
-
+# Maven wrapper JAR
 !**/maven-wrapper.jar

@@ -65,7 +65,7 @@ export const AegisProvider = ({ children }) => {
       setBackendStatus({
         isOnline: res.isOnline,
         checked: true,
-        detail: res.isOnline ? 'Spring Boot Active' : 'Standalone Simulation Mode'
+        detail: res.isOnline ? 'Spring Boot Active' : 'Backend Connecting...'
       });
     };
     checkBackend();
@@ -124,7 +124,9 @@ export const AegisProvider = ({ children }) => {
 
   // Sync drones with backend if backend is available
   useEffect(() => {
-    if (backendStatus.isOnline && currentUser?.token) {
+    if (!backendStatus.isOnline || !currentUser?.token) return;
+
+    const syncDrones = () => {
       aegisApi.getDrones(activeSector, 50.0, currentUser.token).then(res => {
         if (res.unauthorized) {
           logoutUser();
@@ -143,7 +145,11 @@ export const AegisProvider = ({ children }) => {
           });
         }
       });
-    }
+    };
+
+    syncDrones();
+    const interval = setInterval(syncDrones, 8000);
+    return () => clearInterval(interval);
   }, [backendStatus.isOnline, activeSector, currentUser]);
 
   // Main Simulation Loop

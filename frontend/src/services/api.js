@@ -2,7 +2,8 @@
 // Communicates with Spring Boot backend when online, with seamless mock fallback
 
 // Robust API base normalization: handles base domain, with/without /api, trailing slashes
-const rawApiBase = (import.meta.env.VITE_API_BASE_URL || '/api').trim().replace(/\/+$/, '');
+const defaultBaseUrl = import.meta.env.PROD ? 'https://aegis-backend-z8wf.onrender.com' : '/api';
+const rawApiBase = (import.meta.env.VITE_API_BASE_URL || defaultBaseUrl).trim().replace(/\/+$/, '');
 export const API_BASE = (rawApiBase === '' || rawApiBase === '/api')
   ? '/api'
   : (rawApiBase.endsWith('/api') ? rawApiBase : `${rawApiBase}/api`);
@@ -46,7 +47,7 @@ export const aegisApi = {
       const res = await fetch(`${API_BASE}/health`, {
         method: 'GET',
         headers: { Accept: 'application/json' },
-        signal: AbortSignal.timeout(2000)
+        signal: AbortSignal.timeout(10000)
       });
       if (res.ok) {
         const data = await res.json();
@@ -65,37 +66,47 @@ export const aegisApi = {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
-        signal: AbortSignal.timeout(3500)
+        signal: AbortSignal.timeout(15000)
       });
       if (res.ok) {
         const data = await res.json();
         return { success: true, token: data.token, role: data.role, username: data.username, source: 'backend' };
       }
       if (res.status === 401 || res.status === 400 || res.status === 403) {
-        let errorMsg = 'Invalid username or password (rejected by security backend)';
+        let errorMsg = 'Invalid username or password';
         try {
           const errData = await res.json();
           if (errData && errData.error) errorMsg = errData.error;
+          else if (errData && errData.message) errorMsg = errData.message;
         } catch {}
         return { success: false, error: errorMsg };
       }
       return { success: false, error: `Authentication failed (HTTP ${res.status})` };
-    } catch {
-      // Backend is offline / unreachable; validate strictly against demo credentials
-      if (
-        (username === 'admin' && password === 'Admin@123') ||
-        (username === 'operator1' && password === 'ChangeMe123!') ||
-        (username === 'officer_sharma' && password === 'Admin@123')
-      ) {
-        return {
-          success: true,
-          token: 'demo-jwt-token-aegis-simulation-2026',
-          role: username === 'admin' ? 'Administrator' : username === 'officer_sharma' ? 'Security Officer' : 'Command Center Operator',
-          username,
-          source: 'simulation'
-        };
+    } catch (err) {
+      // Offline fallback: ONLY available when running local development with simulation explicitly enabled
+      if (import.meta.env.DEV && import.meta.env.VITE_ENABLE_SIMULATION === 'true') {
+        if (
+          (username === 'admin' && password === 'Admin@123') ||
+          (username === 'operator1' && password === 'ChangeMe123!') ||
+          (username === 'officer_sharma' && password === 'Admin@123')
+        ) {
+          return {
+            success: true,
+            token: 'demo-jwt-token-aegis-simulation-2026',
+            role: username === 'admin' ? 'Administrator' : username === 'officer_sharma' ? 'Security Officer' : 'Command Center Operator',
+            username,
+            source: 'simulation'
+          };
+        }
+        return { success: false, error: 'Invalid username or password (offline simulation)' };
       }
-      return { success: false, error: 'Invalid username or password (offline simulation)' };
+
+      // In production, never silently authenticate with demo credentials
+      const isTimeout = err.name === 'TimeoutError' || err.name === 'AbortError';
+      const msg = isTimeout
+        ? 'Backend connection timed out. If the service was sleeping, please wait a moment and retry.'
+        : `Unable to connect to AEGIS C2 Backend (${API_BASE}). Verify backend service is running.`;
+      return { success: false, error: msg };
     }
   },
 

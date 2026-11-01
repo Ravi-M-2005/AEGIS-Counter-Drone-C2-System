@@ -13,6 +13,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.util.Optional;
+
 @Configuration
 @Profile("prod")
 public class ProductionDataInitializer {
@@ -29,22 +31,36 @@ public class ProductionDataInitializer {
 
         return args -> {
             String targetUsername = (adminUsername != null && !adminUsername.isBlank()) ? adminUsername.trim() : "admin";
-            boolean adminExists = operators.findByUsername(targetUsername).isPresent();
+            Optional<Operator> existing = operators.findByUsername(targetUsername);
 
-            if (!adminExists) {
-                if (adminPassword != null && !adminPassword.isBlank()) {
-                    Operator admin = new Operator(targetUsername, encoder.encode(adminPassword), "Administrator");
+            if (adminPassword != null && !adminPassword.isBlank()) {
+                String cleanPassword = adminPassword.trim();
+                if (existing.isEmpty()) {
+                    Operator admin = new Operator(targetUsername, encoder.encode(cleanPassword), "Administrator");
                     admin.setEnabled(true);
                     operators.save(admin);
-                    log.info("Production administrator account successfully initialized for user: {}", targetUsername);
+                    log.info("Production administrator account '{}' initialized successfully in database.", targetUsername);
                 } else {
-                    log.warn("================================================================================");
-                    log.warn("AEGIS PRODUCTION WARNING: Administrator '{}' does not exist.", targetUsername);
-                    log.warn("Please set AEGIS_ADMIN_PASSWORD environment variable to seed the administrator.");
-                    log.warn("================================================================================");
+                    Operator admin = existing.get();
+                    if (!encoder.matches(cleanPassword, admin.getPasswordHash())) {
+                        admin.setPasswordHash(encoder.encode(cleanPassword));
+                        admin.setEnabled(true);
+                        operators.save(admin);
+                        log.info("Production administrator account '{}' password updated to match configured AEGIS_ADMIN_PASSWORD.", targetUsername);
+                    } else {
+                        log.info("Production administrator account '{}' credentials verified against environment configuration.", targetUsername);
+                    }
                 }
             } else {
-                log.info("Production administrator account '{}' already exists. Preserving existing credentials.", targetUsername);
+                if (existing.isEmpty()) {
+                    log.error("================================================================================");
+                    log.error("AEGIS PRODUCTION CRITICAL: Administrator account '{}' does not exist in database", targetUsername);
+                    log.error("and AEGIS_ADMIN_PASSWORD environment variable is not set!");
+                    log.error("Please configure AEGIS_ADMIN_PASSWORD in the Render Dashboard under Environment.");
+                    log.error("================================================================================");
+                } else {
+                    log.info("Production administrator account '{}' already exists in the database. Preserving credentials.", targetUsername);
+                }
             }
 
             // Seed initial drone telemetry fleet if the database is newly initialized

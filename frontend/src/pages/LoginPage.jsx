@@ -103,8 +103,8 @@ export const LoginPage = ({ onLoginSuccess }) => {
               </span>
             ) : (
               <span className="text-amber-400 font-bold flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                STANDALONE SIMULATION MODE
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                {backendStatus.checked ? 'BACKEND CONNECTING...' : 'INITIALIZING...'}
               </span>
             )}
           </div>
@@ -121,23 +121,32 @@ export const LoginPage = ({ onLoginSuccess }) => {
           <p className="text-xs text-slate-400 mt-1 font-mono tracking-wide">
             AI-Powered Counter-Drone Surveillance & Threat Management
           </p>
-          <div className="inline-block mt-2 px-2.5 py-0.5 rounded bg-amber-950/70 border border-amber-500/50 text-[10px] font-mono font-bold text-amber-300">
-            SIMULATION MODE – DEMO DATA
+          <div className="inline-block mt-2 px-2.5 py-0.5 rounded bg-cyan-950/70 border border-cyan-500/50 text-[10px] font-mono font-bold text-cyan-300">
+            MILITARY SECURE GATEWAY
           </div>
+          {import.meta.env.DEV && (
+            <div className="block mt-1">
+              <span className="inline-block px-2 py-0.5 rounded bg-amber-950/70 border border-amber-500/50 text-[10px] font-mono font-bold text-amber-300">
+                LOCAL DEV MODE
+              </span>
+            </div>
+          )}
         </div>
 
-        {/* Demo Notice */}
-        <div className="mb-5 p-3 rounded-lg bg-cyan-950/40 border border-cyan-800/40 text-[11px] text-cyan-300 font-mono space-y-1.5">
-          <div className="font-bold flex items-center gap-1 text-cyan-400">
-            <KeyRound className="w-3.5 h-3.5" />
-            <span>AUTHENTICATED DEMO CREDENTIALS</span>
+        {/* Demo Notice (Local Development Only) */}
+        {import.meta.env.DEV && (
+          <div className="mb-5 p-3 rounded-lg bg-cyan-950/40 border border-cyan-800/40 text-[11px] text-cyan-300 font-mono space-y-1.5">
+            <div className="font-bold flex items-center gap-1 text-cyan-400">
+              <KeyRound className="w-3.5 h-3.5" />
+              <span>AUTHENTICATED DEMO CREDENTIALS</span>
+            </div>
+            <div className="text-slate-300 grid grid-cols-1 gap-1 text-[10.5px]">
+              <div>Admin: <code className="text-cyan-300 font-bold">admin</code> / <code className="text-cyan-300 font-bold">Admin@123</code></div>
+              <div>Operator: <code className="text-cyan-300 font-bold">operator1</code> / <code className="text-cyan-300 font-bold">ChangeMe123!</code></div>
+              <div>Officer: <code className="text-cyan-300 font-bold">officer_sharma</code> / <code className="text-cyan-300 font-bold">Admin@123</code></div>
+            </div>
           </div>
-          <div className="text-slate-300 grid grid-cols-1 gap-1 text-[10.5px]">
-            <div>Admin: <code className="text-cyan-300 font-bold">admin</code> / <code className="text-cyan-300 font-bold">Admin@123</code></div>
-            <div>Operator: <code className="text-cyan-300 font-bold">operator1</code> / <code className="text-cyan-300 font-bold">ChangeMe123!</code></div>
-            <div>Officer: <code className="text-cyan-300 font-bold">officer_sharma</code> / <code className="text-cyan-300 font-bold">Admin@123</code></div>
-          </div>
-        </div>
+        )}
 
         {/* Error Alert */}
         {error && (
@@ -212,36 +221,38 @@ export const LoginPage = ({ onLoginSuccess }) => {
           </button>
         </form>
 
-        {/* Quick Fill Buttons */}
-        <div className="mt-6 pt-4 border-t border-slate-800 text-[11px] font-mono text-slate-400">
-          <div className="mb-2 text-slate-500 text-[10px] uppercase font-bold">1-Click Fill Demo Credentials:</div>
-          <div className="grid grid-cols-3 gap-2">
-            <button
-              type="button"
-              onClick={() => handleQuickFill('admin', 'Admin@123')}
-              className="px-2 py-1.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700 text-cyan-300 text-left transition-colors cursor-pointer"
-            >
-              <div className="font-bold truncate">admin</div>
-              <div className="text-[9px] text-slate-500 truncate">Admin L5</div>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickFill('operator1', 'ChangeMe123!')}
-              className="px-2 py-1.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700 text-cyan-300 text-left transition-colors cursor-pointer"
-            >
-              <div className="font-bold truncate">operator1</div>
-              <div className="text-[9px] text-slate-500 truncate">Operator L2</div>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickFill('officer_sharma', 'Admin@123')}
-              className="px-2 py-1.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700 text-cyan-300 text-left transition-colors cursor-pointer"
-            >
-              <div className="font-bold truncate">officer_sharma</div>
-              <div className="text-[9px] text-slate-500 truncate">Officer L3</div>
-            </button>
+        {/* Quick Fill Buttons (Local Development Only) */}
+        {import.meta.env.DEV && (
+          <div className="mt-6 pt-4 border-t border-slate-800 text-[11px] font-mono text-slate-400">
+            <div className="mb-2 text-slate-500 text-[10px] uppercase font-bold">1-Click Fill Demo Credentials (DEV ONLY):</div>
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={() => handleQuickFill('admin', 'Admin@123')}
+                className="px-2 py-1.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700 text-cyan-300 text-left transition-colors cursor-pointer"
+              >
+                <div className="font-bold truncate">admin</div>
+                <div className="text-[9px] text-slate-500 truncate">Admin L5</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleQuickFill('operator1', 'ChangeMe123!')}
+                className="px-2 py-1.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700 text-cyan-300 text-left transition-colors cursor-pointer"
+              >
+                <div className="font-bold truncate">operator1</div>
+                <div className="text-[9px] text-slate-500 truncate">Operator L2</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleQuickFill('officer_sharma', 'Admin@123')}
+                className="px-2 py-1.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700 text-cyan-300 text-left transition-colors cursor-pointer"
+              >
+                <div className="font-bold truncate">officer_sharma</div>
+                <div className="text-[9px] text-slate-500 truncate">Officer L3</div>
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

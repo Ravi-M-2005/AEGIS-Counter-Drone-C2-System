@@ -91,8 +91,8 @@ export const Header = () => {
                 </span>
               ) : (
                 <span className="px-2 py-0.5 text-[10px] font-mono tracking-widest bg-amber-950/70 text-amber-300 border border-amber-500/50 rounded font-bold flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                  SIMULATION MODE – DEMO DATA
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                  {backendStatus.checked ? 'BACKEND OFFLINE' : 'CONNECTING...'}
                 </span>
               )}
             </div>
